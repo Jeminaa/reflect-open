@@ -3,6 +3,7 @@ import { FormattingToolbarBridge } from '@/editor/formatting-toolbar-bridge.tsx'
 import { MediaLightbox } from '@/editor/media-lightbox.tsx'
 import { MenuBoundaryContext } from '@/editor/menu-boundary.ts'
 import { useWikilinkResolver } from '@/editor/resolve-wikilink.ts'
+import { SelectLineKeymap } from '@/editor/select-line-keymap.tsx'
 import { useXPostResolver, X_MEDIA_URL_PROTOCOLS } from '@/editor/use-x-post-resolver.ts'
 import { lightboxItemFromXPostMedia } from '@/editor/x-post-media-lightbox-item.ts'
 import { useYouTubeVideoResolver } from '@/editor/youtube-video-resolver.ts'
@@ -506,6 +507,7 @@ export function NoteEditor({
         resolveFileInfo={handleResolveFileInfo}
         onExitBoundary={handleExitBoundary}
       >
+        <SelectLineKeymap />
         {/* Only a pane that persists files gets the toolbar's attach button;
             `handleFilePaste` is the same handler meowdown pastes through. */}
         <FormattingToolbarBridge saveFile={saveFile !== undefined ? handleFilePaste : undefined} />

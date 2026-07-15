@@ -32,6 +32,7 @@ import {
 } from '@meowdown/react'
 import { EditorInputTraits } from '@/editor/editor-input-traits'
 import { FormattingToolbarBridge } from '@/editor/formatting-toolbar-bridge'
+import { SelectLineKeymap } from '@/editor/select-line-keymap'
 import {
   IMAGE_LIGHTBOX_TRANSITION_NAME,
   ImageLightbox,
@@ -480,6 +481,7 @@ export function NoteEditor({
         onExitBoundary={handleExitBoundary}
       >
         <EditorInputTraits />
+        <SelectLineKeymap />
         {/* Only a pane that persists files gets the toolbar's attach button;
             `handleFilePaste` is the same handler meowdown pastes through. */}
         <FormattingToolbarBridge

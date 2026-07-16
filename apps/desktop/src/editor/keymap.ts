@@ -71,9 +71,9 @@ export const AI_MENU_BINDING = 'Mod-Shift-j'
 const REFLECT_EDITOR_BINDINGS: Record<string, string> = {
   [AI_MENU_BINDING]: 'Open the AI menu on the selection',
   // Overrides meowdown's "Collapse the selection" description: Reflect's
-  // select-line keymap runs first and falls through to the collapse, so one
-  // key toggles between "line selected" and "caret".
-  Escape: 'Select the current line, then collapse the selection',
+  // select-block keymap runs first and falls through to the collapse, so one
+  // key toggles between "block selected" and "caret".
+  Escape: 'Select the current block, then collapse the selection',
 }
 
 export const EDITOR_BINDING_DESCRIPTIONS: Record<string, string> = registerKeymap('editor', {

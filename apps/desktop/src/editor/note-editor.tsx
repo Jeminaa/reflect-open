@@ -48,7 +48,7 @@ import { isDeepLinkUrl } from '@/lib/deep-links/parse.ts'
 import { useFollowDeepLink } from '@/lib/deep-links/use-follow-deep-link.ts'
 import { openUrlSync } from '@/lib/open-url.ts'
 import { cn } from '@/lib/utils.ts'
-import { SelectLineKeymap } from '@/editor/select-line-keymap.tsx'
+import { SelectBlockKeymap } from '@/editor/select-block-keymap.tsx'
 
 type WikilinkHoverRenderer = (hit: WikilinkHoverHit) => ReactNode | Promise<ReactNode>
 
@@ -502,7 +502,7 @@ export function NoteEditor({
         onExitBoundary={handleExitBoundary}
       >
         <EditorInputTraits />
-        <SelectLineKeymap />
+        <SelectBlockKeymap />
         {/* Only a pane that persists files gets the toolbar's attach button;
             `handleFilePaste` is the same handler meowdown pastes through. */}
         <FormattingToolbarBridge

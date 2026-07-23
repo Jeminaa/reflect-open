@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Schema, type Node } from '@prosekit/pm/model'
-import { pdfEmbedTargets } from './pdf-embed'
+import { parsePageRatio, pdfEmbedTargets } from './pdf-embed'
 
 // Mirrors the meowdown shapes that matter here: PDF references live as
 // `mdImage`/`mdFile` marks on inline text, never as their own nodes.
@@ -54,5 +54,22 @@ describe('pdfEmbedTargets', () => {
       schema.text('영수증', [schema.marks.mdFile.create({ href: 'assets/영수증.pdf' })])
     const doc = docWith([pill()], [pill()])
     expect(pdfEmbedTargets(doc)).toHaveLength(2)
+  })
+})
+
+describe('parsePageRatio', () => {
+  it('reads an A4 MediaBox', () => {
+    expect(parsePageRatio('<< /Type /Page /MediaBox [0 0 595.28 841.89] >>')).toBeCloseTo(
+      841.89 / 595.28,
+    )
+  })
+
+  it('inverts the ratio for a rotated page', () => {
+    expect(parsePageRatio('/MediaBox [0 0 595 842] /Rotate 90')).toBeCloseTo(595 / 842)
+  })
+
+  it('returns null without a page box or with a degenerate one', () => {
+    expect(parsePageRatio('%PDF-1.7 no boxes here')).toBeNull()
+    expect(parsePageRatio('/MediaBox [0 0 0 842]')).toBeNull()
   })
 })

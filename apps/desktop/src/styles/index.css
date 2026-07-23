@@ -394,20 +394,53 @@ html:root {
 }
 
 /* Inline PDF previews (pdf-embed.tsx): a widget decoration after a PDF
-   pill/embed hosting WKWebView's native PDF view in an iframe. Sized like a
-   generous image block — tall enough to read, short enough that the note
-   stays scannable; the iframe scrolls its own pages. Unlayered plain CSS so
-   it wins over meowdown's `@layer meowdown` content rules. */
+   pill/embed hosting WKWebView's native PDF view in an iframe. The box opens
+   at the document's first-page aspect ratio (one clean page, no scroll), the
+   native corner resizer hands sizing to the user, and the gutter chevron
+   collapses the preview to nothing. Unlayered plain CSS so it wins over
+   meowdown's `@layer meowdown` content rules. */
 .reflect-pdf-embed {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
   margin: 0.5rem 0;
+}
+.reflect-pdf-embed-toggle {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.125rem;
+  border: 0;
+  border-radius: 0.25rem;
+  padding: 0;
+  background: transparent;
+  color: color-mix(in oklab, var(--foreground) 45%, transparent);
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  cursor: pointer;
+}
+.reflect-pdf-embed-toggle:hover {
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  color: var(--foreground);
+}
+.reflect-pdf-embed-box {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  resize: both;
+  border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+  border-radius: 0.5rem;
+  background: var(--background);
+}
+.reflect-pdf-embed[data-collapsed='true'] .reflect-pdf-embed-box {
+  display: none;
 }
 .reflect-pdf-embed iframe {
   display: block;
   width: 100%;
-  height: 32rem;
-  border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
-  border-radius: 0.5rem;
-  background: var(--background);
+  height: 100%;
+  border: 0;
 }
 /* The wiki-link hover card's compact body (wiki-link-hover-preview.tsx).
    Meowdown's card is a 20 × 12rem glimpse; the editor's display sizes (20px

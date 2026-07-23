@@ -2,6 +2,7 @@ import type { MaybePromise } from '@reflect/utils'
 import { FormattingToolbarBridge } from '@/editor/formatting-toolbar-bridge.tsx'
 import { MediaLightbox } from '@/editor/media-lightbox.tsx'
 import { MenuBoundaryContext } from '@/editor/menu-boundary.ts'
+import { PdfEmbeds } from '@/editor/pdf-embed.tsx'
 import { useWikilinkResolver } from '@/editor/resolve-wikilink.ts'
 import { SelectBlockKeymap } from '@/editor/select-block-keymap.tsx'
 import { useXPostResolver, X_MEDIA_URL_PROTOCOLS } from '@/editor/use-x-post-resolver.ts'
@@ -508,6 +509,7 @@ export function NoteEditor({
         onExitBoundary={handleExitBoundary}
       >
         <SelectBlockKeymap />
+        <PdfEmbeds resolveUrl={handleResolveImageUrl} />
         {/* Only a pane that persists files gets the toolbar's attach button;
             `handleFilePaste` is the same handler meowdown pastes through. */}
         <FormattingToolbarBridge saveFile={saveFile !== undefined ? handleFilePaste : undefined} />

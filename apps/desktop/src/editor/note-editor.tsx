@@ -40,6 +40,7 @@ import {
 } from '@/editor/image-lightbox'
 import { isOpenableExternalUrl } from '@/editor/open-external-link'
 import { resolveWikilink } from '@/editor/resolve-wikilink'
+import { PdfEmbeds } from '@/editor/pdf-embed'
 import { isTouchEditorSurface } from '@/lib/platform-surface'
 import { useLightboxTransition } from '@/editor/use-lightbox-transition'
 import { isDeepLinkUrl } from '@/lib/deep-links/parse'
@@ -482,6 +483,7 @@ export function NoteEditor({
       >
         <EditorInputTraits />
         <SelectBlockKeymap />
+        <PdfEmbeds resolveUrl={handleResolveImageUrl} />
         {/* Only a pane that persists files gets the toolbar's attach button;
             `handleFilePaste` is the same handler meowdown pastes through. */}
         <FormattingToolbarBridge

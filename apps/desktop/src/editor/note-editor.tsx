@@ -49,6 +49,7 @@ import { useFollowDeepLink } from '@/lib/deep-links/use-follow-deep-link.ts'
 import { openUrlSync } from '@/lib/open-url.ts'
 import { cn } from '@/lib/utils.ts'
 import { SelectBlockKeymap } from '@/editor/select-block-keymap.tsx'
+import { PdfEmbeds } from '@/editor/pdf-embed.tsx'
 
 type WikilinkHoverRenderer = (hit: WikilinkHoverHit) => ReactNode | Promise<ReactNode>
 
@@ -503,6 +504,7 @@ export function NoteEditor({
       >
         <EditorInputTraits />
         <SelectBlockKeymap />
+        <PdfEmbeds resolveUrl={handleResolveImageUrl} />
         {/* Only a pane that persists files gets the toolbar's attach button;
             `handleFilePaste` is the same handler meowdown pastes through. */}
         <FormattingToolbarBridge

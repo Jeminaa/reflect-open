@@ -23,6 +23,29 @@ interface NotePreviewProps {
   entry: NoteEntry
 }
 
+/**
+ * Rendering cost is proportional to note size, and the preview mounts
+ * synchronously with the highlight — a multi-hundred-KB note (a chat-log
+ * import) freezes the palette input for seconds mid-keystroke. The preview is
+ * a glance, not a reader, so cap what reaches the markdown renderer and say
+ * so. Cut at a line break so the tail never renders half a block.
+ */
+const PREVIEW_CHAR_LIMIT = 20_000
+
+interface PreviewSlice {
+  readonly text: string
+  readonly truncated: boolean
+}
+
+function sliceForPreview(body: string): PreviewSlice {
+  if (body.length <= PREVIEW_CHAR_LIMIT) {
+    return { text: body, truncated: false }
+  }
+  const head = body.slice(0, PREVIEW_CHAR_LIMIT)
+  const lastBreak = head.lastIndexOf('\n')
+  return { text: lastBreak > 0 ? head.slice(0, lastBreak) : head, truncated: true }
+}
+
 async function readNoteForPreview(path: string): Promise<string | null> {
   try {
     return await readNote(path)
@@ -54,7 +77,17 @@ export function NotePreview({ entry }: NotePreviewProps): ReactElement {
   } else if (body === null || body.trim() === '') {
     content = <p className="text-sm text-text-muted italic">Empty</p>
   } else {
-    content = <MarkdownPreview content={body} resolveImageUrl={resolveImageUrl} />
+    const slice = sliceForPreview(body)
+    content = (
+      <>
+        <MarkdownPreview content={slice.text} resolveImageUrl={resolveImageUrl} />
+        {slice.truncated ? (
+          <p className="mt-3 text-sm text-text-muted italic">
+            Preview truncated — open the note to read the rest.
+          </p>
+        ) : null}
+      </>
+    )
   }
 
   return (

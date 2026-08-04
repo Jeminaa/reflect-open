@@ -333,6 +333,22 @@ describe('CommandPalette', () => {
     expect(preview.element().textContent).not.toContain('pinned: true')
   })
 
+  it('caps a huge note so the preview cannot freeze typing, and says so', async () => {
+    suggestWikiTargets.mockResolvedValue([])
+    searchWithFilters.mockResolvedValue([
+      { path: 'notes/huge.md', title: 'Huge', dailyDate: null, snippet: null },
+    ])
+    // A chat-log-sized body: far past the preview cap, in many short lines.
+    readNote.mockResolvedValue('ㅇ line of chat log\n'.repeat(3000))
+    const { view } = await renderPalette('huge')
+    const preview = view.getByTestId('palette-preview')
+    await expect.element(preview).toHaveTextContent('Preview truncated')
+    const rendered = view.getByTestId('markdown-preview').element().textContent ?? ''
+    expect(rendered.length).toBeLessThanOrEqual(20_000)
+    // The cap cuts at a line break, never mid-block.
+    expect(rendered.endsWith('ㅇ line of chat log')).toBe(true)
+  })
+
   it('a daily note without a file yet previews as Empty under its day label', async () => {
     suggestWikiTargets.mockResolvedValue([
       { target: '2026-06-16', path: null, title: '2026-06-16', alias: null, date: '2026-06-16' },

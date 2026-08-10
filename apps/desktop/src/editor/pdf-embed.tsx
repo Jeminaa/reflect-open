@@ -91,7 +91,7 @@ export function parsePageRatio(pdfText: string): number | null {
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
     return null
   }
-  const rotated = /\/Rotate\s+(90|270)/.test(pdfText.slice(box.index, box.index + 400))
+  const rotated = /\/Rotate\s+(?:90|270)/.test(pdfText.slice(box.index, box.index + 400))
   return rotated ? width / height : height / width
 }
 

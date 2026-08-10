@@ -52,7 +52,7 @@ export async function getBacklinks(path: string): Promise<Backlink[]> {
   if (targetKeys.length === 0) {
     return []
   }
-  return inboundLinks(targetKeys)
+  return await inboundLinks(targetKeys)
     .select(['links.sourcePath', 'links.targetRaw', 'links.alias', 'links.posFrom', 'links.posTo'])
     .orderBy('links.sourcePath')
     .execute()

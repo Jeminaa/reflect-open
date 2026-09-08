@@ -442,6 +442,7 @@ html:root {
   height: 100%;
   border: 0;
 }
+
 /* The wiki-link hover card's compact body (wiki-link-hover-preview.tsx).
    Meowdown's card is a 20 × 12rem glimpse; the editor's display sizes (20px
    H1, rem-sized checkboxes) overwhelm its 12px body text, so the type ramp

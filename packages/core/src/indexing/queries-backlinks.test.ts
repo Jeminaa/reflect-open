@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { setBridge } from '../ipc/bridge'
-import { getBacklinks, getBacklinksWithContext } from './queries-backlinks'
+import { setBridge } from '../ipc/bridge.ts'
+import { getBacklinks, getBacklinksWithContext } from './queries-backlinks.ts'
 
 const mockInvoke = vi.fn<(command: string, args: Record<string, unknown>) => Promise<unknown>>()
 

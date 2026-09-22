@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Schema, type Node } from '@prosekit/pm/model'
-import { parsePageRatio, pdfEmbedTargets } from './pdf-embed'
+import { parsePageRatio, pdfEmbedTargets } from './pdf-embed.tsx'
 
 // Mirrors the meowdown shapes that matter here: PDF references live as
 // `mdImage`/`mdFile` marks on inline text, never as their own nodes.

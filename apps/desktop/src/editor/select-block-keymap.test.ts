@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Schema, type Node } from '@prosekit/pm/model'
 import { EditorState, NodeSelection, TextSelection, type Transaction } from '@prosekit/pm/state'
-import { selectCurrentBlock } from './select-block-keymap'
+import { selectCurrentBlock } from './select-block-keymap.tsx'
 
 // Mirrors the meowdown shapes that matter here: flat-list bullets are `list`
 // nodes holding a paragraph plus nested lists, everything else sits directly

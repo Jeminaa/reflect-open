@@ -10,7 +10,9 @@ import { Decoration, DecorationSet } from '@prosekit/pm/view'
  * the source is unsafe or the graph is gone (the same contract as the editor's
  * `resolveImageUrl` prop, whose implementation this reuses).
  */
-export type PdfUrlResolver = (source: string) => string | null | undefined
+export type PdfUrlResolver = (
+  source: string,
+) => string | null | undefined | Promise<string | null | undefined>
 
 /** One inline PDF reference: its raw source and the position after its node. */
 export interface PdfEmbedTarget {
@@ -134,7 +136,12 @@ function prefsFor(source: string): EmbedPrefs {
 const COLLAPSED_LABEL = 'PDF 미리보기 펼치기'
 const EXPANDED_LABEL = 'PDF 미리보기 접기'
 
-function pdfWidget(url: string, source: string): HTMLElement {
+/**
+ * The iframe's URL arrives later when the resolver is still loading the
+ * attachment catalog; the widget mounts at once and drops itself if the
+ * source turns out to be unresolvable.
+ */
+function pdfWidget(url: string | Promise<string | null | undefined>, source: string): HTMLElement {
   const prefs = prefsFor(source)
 
   const container = document.createElement('div')
@@ -149,7 +156,6 @@ function pdfWidget(url: string, source: string): HTMLElement {
   box.className = 'reflect-pdf-embed-box'
 
   const frame = document.createElement('iframe')
-  frame.src = url
   frame.title = source
   box.appendChild(frame)
 
@@ -165,7 +171,26 @@ function pdfWidget(url: string, source: string): HTMLElement {
     box.style.height = `${prefs.height}px`
   } else {
     applyRatio(ratioBySource.get(source) ?? DEFAULT_PAGE_RATIO)
-    ensurePageRatio(url, source, applyRatio)
+  }
+  const load = (resolved: string): void => {
+    frame.src = resolved
+    if (prefs.width === undefined || prefs.height === undefined) {
+      ensurePageRatio(resolved, source, applyRatio)
+    }
+  }
+  if (typeof url === 'string') {
+    load(url)
+  } else {
+    void url.then(
+      (resolved) => {
+        if (typeof resolved === 'string') {
+          load(resolved)
+        } else {
+          container.remove()
+        }
+      },
+      () => container.remove(),
+    )
   }
 
   // The native bottom-right resizer writes inline width/height; remember them
@@ -218,7 +243,7 @@ function buildState(doc: ProseMirrorNode, resolveUrl: PdfUrlResolver): PdfEmbedS
   const decorations: Decoration[] = []
   for (const target of targets) {
     const url = resolveUrl(target.source)
-    if (typeof url !== 'string') {
+    if (url === null || url === undefined) {
       continue
     }
     // Keyed by source + occurrence, not position: a stable key preserves the

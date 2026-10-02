@@ -367,7 +367,7 @@ describe('CommandPalette', () => {
     readNote.mockResolvedValue('ㅇ line of chat log\n'.repeat(3000))
     const { view } = await renderPalette('huge')
     const preview = view.getByTestId('palette-preview')
-    await expect.element(preview).toHaveTextContent('Preview truncated')
+    await expect.element(preview).toMatchTextContent('Preview truncated')
     const rendered = view.getByTestId('markdown-preview').element().textContent ?? ''
     expect(rendered.length).toBeLessThanOrEqual(20_000)
     // The cap cuts at a line break, never mid-block.

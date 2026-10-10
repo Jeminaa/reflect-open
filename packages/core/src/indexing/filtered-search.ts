@@ -64,6 +64,24 @@ export interface FilteredSearchOptions {
   notesOnly?: boolean
 }
 
+/**
+ * Tag filters match by **prefix**: `#credit` finds `#creditcard` and
+ * `#credit/card` as well as `#credit` itself, so a partially typed tag already
+ * narrows the palette instead of returning nothing until it is complete. The
+ * folded key is turned into a `LIKE` pattern; `_` is legal in a tag but a
+ * single-character wildcard to `LIKE`, so it is escaped (`%` and `\\` cannot
+ * occur in an indexed tag — see filter-query TAG_TOKEN_RE).
+ */
+const TAG_LIKE_ESCAPE = '\\'
+
+function tagPrefixPattern(tagKey: string): string {
+  return `${tagKey.replaceAll('_', `${TAG_LIKE_ESCAPE}_`)}%`
+}
+
+function tagKeyMatches(column: RawBuilder<unknown>, tagKey: string): RawBuilder<boolean> {
+  return sql<boolean>`${column} like ${tagPrefixPattern(tagKey)} escape ${TAG_LIKE_ESCAPE}`
+}
+
 /** The columns every hit carries besides the FTS snippet. */
 const HIT_COLUMNS = [
   'notes.path',
@@ -132,7 +150,7 @@ export async function searchWithFilters(
       .innerJoin('notes', 'notes.path', 'tags.notePath')
       .select(HIT_COLUMNS)
       // The length guard above guarantees a primary tag.
-      .where('tags.tagKey', '=', primaryTag!)
+      .where(tagKeyMatches(sql.ref('tags.tagKey'), primaryTag!))
       .where('notes.kind', '!=', 'template')
       .distinct()
 
@@ -143,7 +161,7 @@ export async function searchWithFilters(
             .selectFrom('tags as filterTags')
             .select(sql<number>`1`.as('one'))
             .whereRef('filterTags.notePath', '=', 'notes.path')
-            .where('filterTags.tagKey', '=', tag),
+            .where(tagKeyMatches(sql.ref('filterTags.tagKey'), tag)),
         )
       })
     }
@@ -215,7 +233,7 @@ export async function searchWithFilters(
           .selectFrom('tags')
           .select(sql<number>`1`.as('one'))
           .whereRef('tags.notePath', '=', 'notes.path')
-          .where('tags.tagKey', '=', tag),
+          .where(tagKeyMatches(sql.ref('tags.tagKey'), tag)),
       )
     })
   }

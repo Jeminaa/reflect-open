@@ -52,12 +52,13 @@ describe('searchWithFilters', () => {
     const sql = String(args['sql'])
     expect(sql).toContain('from "tags"')
     expect(sql).toContain('inner join "notes"')
-    expect(sql).toContain('"tags"."tag_key"')
+    // Tags match by prefix: a half-typed `#cred` already narrows to `#creditcard`.
+    expect(sql).toContain('"tags"."tag_key" like ? escape ?')
     expect(sql).not.toContain('search_fts')
     expect(sql).not.toContain('lower(')
     // The template exclusion rides every search path.
     expect(sql).toContain('"notes"."kind" != ?')
-    expect(args['params']).toEqual(['work', 'template', 12])
+    expect(args['params']).toEqual(['work%', '\\', 'template', 12])
   })
 
   it('keeps additional tag filters as indexed existence checks', async () => {
@@ -79,9 +80,29 @@ describe('searchWithFilters', () => {
     expect(sql).toContain('from "tags"')
     expect(sql).toContain('from "tags" as "filter_tags"')
     expect(sql).toContain('"filter_tags"."note_path" = "notes"."path"')
-    expect(sql).toContain('"filter_tags"."tag_key"')
+    expect(sql).toContain('"filter_tags"."tag_key" like ? escape ?')
     expect(sql).not.toContain('search_fts')
-    expect(args['params']).toEqual(['work', 'template', 'home', 12])
+    expect(args['params']).toEqual(['work%', '\\', 'template', 'home%', '\\', 12])
+  })
+
+  it('escapes `_` in tag keys so it is not a LIKE wildcard', async () => {
+    mockInvoke.mockResolvedValueOnce([])
+
+    await searchWithFilters(parseSearchQuery('#credit_card'))
+
+    const [, args] = mockInvoke.mock.calls[0]!
+    expect(args['params']).toEqual([String.raw`credit\_card%`, '\\', 'template', 12])
+  })
+
+  it('matches tag prefixes on the text search path too', async () => {
+    mockInvoke.mockResolvedValueOnce([])
+
+    await searchWithFilters(parseSearchQuery('#credit statement'))
+
+    const [, args] = mockInvoke.mock.calls[0]!
+    const sql = String(args['sql'])
+    expect(sql).toContain('"tags"."tag_key" like ? escape ?')
+    expect(args['params']).toContain('credit%')
   })
 
   it('applies non-tag filters on the tag-first recall path', async () => {
@@ -118,7 +139,14 @@ describe('searchWithFilters', () => {
     expect(sql).toContain('"notes"."is_pinned" =')
     expect(sql).toContain('"notes"."mtime" >=')
     expect(sql).not.toContain('search_fts')
-    expect(args['params']).toEqual(['work', 'template', 1, startOfLocalDay('2026-01-01'), 12])
+    expect(args['params']).toEqual([
+      'work%',
+      '\\',
+      'template',
+      1,
+      startOfLocalDay('2026-01-01'),
+      12,
+    ])
   })
 
   it('promotes title matches, then bm25, pinned and recency on text search', async () => {

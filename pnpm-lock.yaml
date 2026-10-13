@@ -77,7 +77,7 @@ importers:
         version: 0.5.0
       '@prosekit/core':
         specifier: 0.13.3
-        version: 0.13.3(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.1)
+        version: 0.13.3(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.2)
       '@prosekit/pm':
         specifier: 0.1.20
         version: 0.1.20

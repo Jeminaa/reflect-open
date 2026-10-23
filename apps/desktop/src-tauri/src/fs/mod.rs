@@ -578,19 +578,34 @@ pub fn graph_delete(generation: u64, state: State<GraphState>) -> AppResult<()> 
 /// handle objects of this class") when the graph lives on a cloud-synced or
 /// network volume. The NsFileManager path needs no Automation permission, makes
 /// no sound, and still lands the file in the system Trash for recovery.
+///
+/// `trashItemAtURL` can still refuse a file this process cannot touch even
+/// though the user can (e.g. an iCloud Drive note another app created with
+/// mode 600 and a `com.apple.macl` grant): it fails with "you don't have
+/// permission". Finder can trash those, so fall back to it before giving up.
 #[cfg(desktop)]
 fn os_trash_delete(abs: &Path) -> AppResult<()> {
     #[cfg(target_os = "macos")]
-    let ctx = {
+    {
         use trash::macos::{DeleteMethod, TrashContextExtMacos};
         let mut ctx = trash::TrashContext::default();
         ctx.set_delete_method(DeleteMethod::NsFileManager);
-        ctx
-    };
+        let Err(primary) = ctx.delete(abs) else {
+            return Ok(());
+        };
+        tracing::warn!(?primary, "NSFileManager trash failed; retrying via Finder");
+        ctx.set_delete_method(DeleteMethod::Finder);
+        ctx.delete(abs).map_err(|fallback| {
+            AppError::io(format!(
+                "{primary}; Finder fallback also failed: {fallback}"
+            ))
+        })
+    }
     #[cfg(not(target_os = "macos"))]
-    let ctx = trash::TrashContext::default();
-
-    ctx.delete(abs).map_err(|err| AppError::io(err.to_string()))
+    {
+        let ctx = trash::TrashContext::default();
+        ctx.delete(abs).map_err(|err| AppError::io(err.to_string()))
+    }
 }
 
 /// List eligible Markdown notes anywhere in the vault. `generation`, when

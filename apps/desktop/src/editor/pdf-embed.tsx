@@ -1,3 +1,4 @@
+import type { MaybePromise } from '@reflect/utils'
 import { useMemo } from 'react'
 import { definePlugin, type PlainExtension } from '@prosekit/core'
 import { useExtension } from '@meowdown/react'
@@ -10,9 +11,7 @@ import { Decoration, DecorationSet } from '@prosekit/pm/view'
  * the source is unsafe or the graph is gone (the same contract as the editor's
  * `resolveImageUrl` prop, whose implementation this reuses).
  */
-export type PdfUrlResolver = (
-  source: string,
-) => string | null | undefined | Promise<string | null | undefined>
+export type PdfUrlResolver = (source: string) => MaybePromise<string | null | undefined>
 
 /** One inline PDF reference: its raw source and the position after its node. */
 export interface PdfEmbedTarget {

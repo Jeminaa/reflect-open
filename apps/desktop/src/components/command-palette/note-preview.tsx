@@ -46,7 +46,6 @@ function sliceForPreview(body: string): PreviewSlice {
   return { text: lastBreak > 0 ? head.slice(0, lastBreak) : head, truncated: true }
 }
 
-
 export function NotePreview({ entry }: NotePreviewProps): ReactElement {
   const graph = useGraphInfo()
   const dateFormat = useDateFormat()

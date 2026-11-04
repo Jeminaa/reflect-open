@@ -50,8 +50,9 @@ describe('pdfEmbedTargets', () => {
   })
 
   it('reports every occurrence of a repeated reference', () => {
-    const pill = (): Node =>
-      schema.text('영수증', [schema.marks.mdFile.create({ href: 'assets/영수증.pdf' })])
+    const pill = (): Node => {
+      return schema.text('영수증', [schema.marks.mdFile.create({ href: 'assets/영수증.pdf' })])
+    }
     const doc = docWith([pill()], [pill()])
     expect(pdfEmbedTargets(doc)).toHaveLength(2)
   })

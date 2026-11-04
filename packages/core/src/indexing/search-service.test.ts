@@ -34,6 +34,29 @@ async function searchPaths(
 }
 
 describe('searchWithFilters', () => {
+  it.each(['#cred', 'agenda #cred', '#cred #wo'])('matches tag prefixes for %s', async (query) => {
+    const paths = await searchPaths(
+      [
+        { path: 'notes/card.md', markdown: '# Card\nagenda #creditcard #work\n' },
+        { path: 'notes/nested.md', markdown: '# Nested\nagenda #credit/card #work\n' },
+        { path: 'notes/other.md', markdown: '# Other\nagenda #debit #work\n' },
+      ],
+      query,
+    )
+    expect(paths.toSorted()).toEqual(['notes/card.md', 'notes/nested.md'])
+  })
+
+  it('treats underscores in tag prefixes literally', async () => {
+    const paths = await searchPaths(
+      [
+        { path: 'notes/literal.md', markdown: '# Literal\n#credit_card\n' },
+        { path: 'notes/other.md', markdown: '# Other\n#creditXcard\n' },
+      ],
+      '#credit_',
+    )
+    expect(paths).toEqual(['notes/literal.md'])
+  })
+
   it('starts tag-only recall searches from the folded tag key', async () => {
     const { search } = setup([
       { path: 'notes/work.md', markdown: '# Work\nWeekly agenda. #work\n', mtime: 2000 },

@@ -44,6 +44,22 @@ describe('getBacklinksWithContext', () => {
     }
   }
 
+  it('resolves and pages links to a daily note before its file exists', async () => {
+    const { backlinks } = setup([
+      { path: 'notes/reminder.md', markdown: 'Reminder [[2026-11-05]]\n' },
+      { path: 'templates/hidden.md', markdown: 'Hidden [[2026-11-05]]\n' },
+    ])
+    const raw = await backlinks.getBacklinks('daily/2026-11-05.md')
+    expect(raw.map((row) => row.sourcePath)).toEqual(['notes/reminder.md'])
+    const page = await backlinks.getBacklinksWithContext('daily/2026-11-05.md', {
+      cursor: null,
+      limit: 1,
+    })
+    expect(page.indexedLinkCount).toBe(1)
+    expect(page.contexts.map((row) => row.snippet)).toEqual(['Reminder [[2026-11-05]]'])
+    expect(page.nextCursor).toBeNull()
+  })
+
   it('pages complete sources in deterministic recency order and reads only included sources', async () => {
     const { backlinks, reads } = setup([
       { path: 'notes/target.md', markdown: '# target\n' },

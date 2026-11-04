@@ -1,4 +1,4 @@
-import { sql } from 'kysely'
+import { sql, type RawBuilder } from 'kysely'
 import { displayNoteTitle } from '../markdown/note-title.ts'
 import type { DatabaseService } from './database-service.ts'
 import type { ParsedSearchQuery } from './filter-query.ts'
@@ -68,6 +68,17 @@ export interface FilteredSearchOptions {
    * otherwise contradict to an always-empty result.
    */
   notesOnly?: boolean
+}
+
+// Underscores in tag prefixes are literal, not SQL LIKE wildcards.
+const TAG_LIKE_ESCAPE = '\\'
+
+function tagPrefixPattern(tagKey: string): string {
+  return `${tagKey.replaceAll('_', `${TAG_LIKE_ESCAPE}_`)}%`
+}
+
+function tagKeyMatches(column: RawBuilder<unknown>, tagKey: string): RawBuilder<boolean> {
+  return sql<boolean>`${column} like ${tagPrefixPattern(tagKey)} escape ${TAG_LIKE_ESCAPE}`
 }
 
 /**
@@ -150,7 +161,7 @@ class SearchServiceImpl implements SearchService {
         .innerJoin('notes', 'notes.path', 'tags.notePath')
         .select(HIT_COLUMNS)
         // The length guard above guarantees a primary tag.
-        .where('tags.tagKey', '=', primaryTag!)
+        .where(tagKeyMatches(sql.ref('tags.tagKey'), primaryTag!))
         .where('notes.kind', '!=', 'template')
         .distinct()
 
@@ -161,7 +172,7 @@ class SearchServiceImpl implements SearchService {
               .selectFrom('tags as filterTags')
               .select(sql<number>`1`.as('one'))
               .whereRef('filterTags.notePath', '=', 'notes.path')
-              .where('filterTags.tagKey', '=', tag),
+              .where(tagKeyMatches(sql.ref('filterTags.tagKey'), tag)),
           )
         })
       }
@@ -233,7 +244,7 @@ class SearchServiceImpl implements SearchService {
             .selectFrom('tags')
             .select(sql<number>`1`.as('one'))
             .whereRef('tags.notePath', '=', 'notes.path')
-            .where('tags.tagKey', '=', tag),
+            .where(tagKeyMatches(sql.ref('tags.tagKey'), tag)),
         )
       })
     }

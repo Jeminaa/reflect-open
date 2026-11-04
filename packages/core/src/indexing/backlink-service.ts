@@ -1,3 +1,4 @@
+import { dateFromDailyPath } from '../graph/paths.ts'
 import type { Database } from '@reflect/db'
 import { sql, type Selectable } from 'kysely'
 import { requireGraphSession, type GraphSessionSource } from '../graph/graph-session.ts'
@@ -148,8 +149,7 @@ class BacklinkServiceImpl implements BacklinkService {
   async getBacklinks(path: string): Promise<Backlink[]> {
     const { db } = this.#deps.database
     return await db
-      .selectFrom('backlinks')
-      .where('targetPath', '=', path)
+      .selectFrom(this.#inboundLinks(path).as('backlinks'))
       .select(['sourcePath', 'targetRaw', 'alias', 'posFrom', 'posTo'])
       .orderBy('sourcePath')
       .execute()
@@ -167,9 +167,8 @@ class BacklinkServiceImpl implements BacklinkService {
     }
 
     let sourceQuery = db
-      .selectFrom('backlinks')
+      .selectFrom(this.#inboundLinks(path).as('backlinks'))
       .innerJoin('notes', 'notes.path', 'backlinks.sourcePath')
-      .where('targetPath', '=', path)
       .select(['backlinks.sourcePath', 'notes.title as sourceTitle', sourceRecency.as('recencyMs')])
       .$narrowType<{ sourcePath: string }>()
       .distinct()
@@ -186,9 +185,8 @@ class BacklinkServiceImpl implements BacklinkService {
         .limit(candidateLimit)
         .execute(),
       db
-        .selectFrom('backlinks')
+        .selectFrom(this.#inboundLinks(path).as('backlinks'))
         .innerJoin('notes', 'notes.path', 'backlinks.sourcePath')
-        .where('targetPath', '=', path)
         .select(sql<number>`count(*)`.as('count'))
         .executeTakeFirst(),
     ])
@@ -209,9 +207,8 @@ class BacklinkServiceImpl implements BacklinkService {
     // parameter ceiling; the selected-path guard below also closes the tiny race
     // where an index write lands between the source and context queries.
     let contextRowQuery = db
-      .selectFrom('backlinks')
+      .selectFrom(this.#inboundLinks(path).as('backlinks'))
       .innerJoin('notes', 'notes.path', 'backlinks.sourcePath')
-      .where('targetPath', '=', path)
       .where(
         throughSource({
           recencyMs: lastSource.recencyMs,
@@ -251,6 +248,9 @@ class BacklinkServiceImpl implements BacklinkService {
         .map((row) => row.key)
         .filter((key): key is string => typeof key === 'string'),
     )
+
+    const dailyDate = dateFromDailyPath(path)
+    if (dailyDate !== null) targetKeys.add(dailyDate)
 
     // One read *and one parse* per distinct source: a well-linked source
     // contributes many rows, and context extraction walks the parsed body.
@@ -299,6 +299,37 @@ class BacklinkServiceImpl implements BacklinkService {
       }
     }
     return { contexts: results, nextCursor, indexedLinkCount }
+  }
+
+  #inboundLinks(path: string) {
+    const { db } = this.#deps.database
+    const resolved = db
+      .selectFrom('backlinks')
+      .where('targetPath', '=', path)
+      .select(['sourcePath', 'targetRaw', 'alias', 'posFrom', 'posTo'])
+    const dailyDate = dateFromDailyPath(path)
+    if (dailyDate === null) return resolved
+    // Keep upstream's exact-file/name resolution and add uncreated daily targets.
+    return resolved.union(
+      db
+        .selectFrom('links')
+        .innerJoin('notes', 'notes.path', 'links.sourcePath')
+        .where('links.kind', '=', 'wiki')
+        .where('links.targetKey', '=', dailyDate)
+        .where('notes.kind', '!=', 'template')
+        .where((query) => {
+          return query.not(
+            query.exists(db.selectFrom('notes').select('path').where('path', '=', path)),
+          )
+        })
+        .select([
+          'links.sourcePath',
+          'links.targetRaw',
+          'links.alias',
+          'links.posFrom',
+          'links.posTo',
+        ]),
+    )
   }
 }
 

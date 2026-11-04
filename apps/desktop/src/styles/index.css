@@ -761,3 +761,10 @@ html:root {
     @apply font-sans;
   }
 }
+
+/* Whole sibling bullets selected with Shift+Arrow after Escape. */
+.ProseMirror .reflect-bullet-selected {
+  outline: 1px solid var(--meowdown-node-outline);
+  background: var(--meowdown-node-selection);
+  border-radius: 2px;
+}

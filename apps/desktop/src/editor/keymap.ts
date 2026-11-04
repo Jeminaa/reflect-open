@@ -44,6 +44,8 @@ const REFLECT_EDITOR_BINDINGS: Record<string, string> = {
   // select-block keymap runs first and falls through to the collapse, so one
   // key toggles between "block selected" and "caret".
   Escape: 'Select the current block, then collapse the selection',
+  'Shift-ArrowUp': 'Extend the selected bullets upward',
+  'Shift-ArrowDown': 'Extend the selected bullets downward',
 }
 
 export const EDITOR_BINDING_DESCRIPTIONS: Record<string, string> = {

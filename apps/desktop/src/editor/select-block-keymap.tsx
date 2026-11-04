@@ -1,5 +1,8 @@
-import { useKeymap } from '@meowdown/react'
-import { NodeSelection, type EditorState, type Transaction } from '@prosekit/pm/state'
+import { definePlugin } from '@prosekit/core'
+import { Decoration, DecorationSet } from '@prosekit/pm/view'
+import { BulletRangeSelection } from './bullet-range-selection.ts'
+import { useExtension, useKeymap } from '@meowdown/react'
+import { NodeSelection, Plugin, type EditorState, type Transaction } from '@prosekit/pm/state'
 
 /**
  * The depth of the block to select for the caret's position: the ancestor
@@ -47,7 +50,74 @@ export function selectCurrentBlock(
   return true
 }
 
-const SELECT_BLOCK_KEYMAP = { Escape: selectCurrentBlock }
+/** Expand or shrink a selected bullet range by one sibling, without splitting subtrees. */
+export function extendBulletSelection(direction: -1 | 1) {
+  return (state: EditorState, dispatch?: (transaction: Transaction) => void): boolean => {
+    const { selection, doc } = state
+    const range = selection instanceof BulletRangeSelection ? selection : null
+    if (
+      range === null &&
+      !(selection instanceof NodeSelection && selection.node.type.name === 'list')
+    ) {
+      return false
+    }
+    const anchor = range?.anchorBullet ?? selection.from
+    const head = range?.headBullet ?? selection.from
+    const resolved = doc.resolve(head)
+    const current = resolved.nodeAfter
+    const neighbor =
+      direction < 0 ? resolved.nodeBefore : doc.resolve(head + (current?.nodeSize ?? 0)).nodeAfter
+    // Consume the key at the sibling-list boundary so native text selection cannot take over.
+    if (!current || neighbor?.type.name !== 'list') return true
+    const next = direction < 0 ? head - neighbor.nodeSize : head + current.nodeSize
+    dispatch?.(
+      state.tr
+        .setSelection(
+          next === anchor
+            ? NodeSelection.create(doc, anchor)
+            : new BulletRangeSelection(doc, anchor, next),
+        )
+        .scrollIntoView(),
+    )
+    return true
+  }
+}
+
+const SELECT_BLOCK_KEYMAP = {
+  Escape: selectCurrentBlock,
+  'Shift-ArrowUp': extendBulletSelection(-1),
+  'Shift-ArrowDown': extendBulletSelection(1),
+}
+
+const bulletSelectionExtension = definePlugin(
+  new Plugin({
+    props: {
+      createSelectionBetween(view, anchor, head) {
+        const selection = view.state.selection
+        return selection instanceof BulletRangeSelection &&
+          anchor.pos === selection.anchor &&
+          head.pos === selection.head
+          ? selection
+          : null
+      },
+      decorations(state) {
+        if (!(state.selection instanceof BulletRangeSelection)) return null
+        const decorations: Decoration[] = []
+        for (let position = state.selection.from; position < state.selection.to;) {
+          const node = state.doc.nodeAt(position)
+          if (!node) break
+          decorations.push(
+            Decoration.node(position, position + node.nodeSize, {
+              class: 'reflect-bullet-selected',
+            }),
+          )
+          position += node.nodeSize
+        }
+        return DecorationSet.create(state.doc, decorations)
+      },
+    },
+  }),
+)
 
 /**
  * Binds Escape inside the editor's ProseKit context to {@link selectCurrentBlock}.
@@ -56,6 +126,7 @@ const SELECT_BLOCK_KEYMAP = { Escape: selectCurrentBlock }
  * selection collapse.
  */
 export function SelectBlockKeymap(): null {
+  useExtension(bulletSelectionExtension)
   useKeymap(SELECT_BLOCK_KEYMAP)
   return null
 }

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { Schema, type Node } from '@prosekit/pm/model'
 import { EditorState, NodeSelection, TextSelection, type Transaction } from '@prosekit/pm/state'
-import { selectCurrentBlock } from './select-block-keymap.tsx'
+import { BulletRangeSelection } from './bullet-range-selection.ts'
+import { extendBulletSelection, selectCurrentBlock } from './select-block-keymap.tsx'
 
 // Mirrors the meowdown shapes that matter here: flat-list bullets are `list`
 // nodes holding a paragraph plus nested lists, everything else sits directly
@@ -118,5 +119,102 @@ describe('selectCurrentBlock', () => {
 
   it('falls through on a cross-block selection', () => {
     expect(runSelectBlock(stateWith(doc(paragraph('one'), paragraph('two')), 2, 8))).toBeNull()
+  })
+})
+
+function bullet(text: string, ...children: Node[]): Node {
+  return schema.nodes.list.create(null, [paragraph(text), ...children])
+}
+
+function extend(state: EditorState, direction: -1 | 1): EditorState {
+  let next = state
+  expect(
+    extendBulletSelection(direction)(state, (transaction) => {
+      next = state.apply(transaction)
+    }),
+  ).toBe(true)
+  return next
+}
+
+describe('extendBulletSelection', () => {
+  it('expands in both directions, shrinks to the anchor, and consumes boundaries', () => {
+    const first = bullet('first')
+    const middle = bullet('middle', bullet('child'))
+    const last = bullet('last')
+    const document = doc(first, middle, last)
+    const initial = EditorState.create({
+      doc: document,
+      selection: NodeSelection.create(document, first.nodeSize),
+    })
+    const down = extend(initial, 1)
+    expect(down.selection).toBeInstanceOf(BulletRangeSelection)
+    expect(
+      down.selection.content().content.textBetween(0, down.selection.content().content.size, '|'),
+    ).toContain('child')
+    expect([down.selection.from, down.selection.to]).toEqual([
+      first.nodeSize,
+      document.content.size,
+    ])
+    expect(extend(down, 1)).toBe(down)
+    const contracted = extend(down, -1)
+    expect(contracted.selection.eq(initial.selection)).toBe(true)
+    const up = extend(contracted, -1)
+    expect([up.selection.from, up.selection.to]).toEqual([0, first.nodeSize + middle.nodeSize])
+    expect(extend(up, -1)).toBe(up)
+    expect(extend(up, 1).selection.eq(initial.selection)).toBe(true)
+  })
+
+  it('deletes complete selected subtrees and leaves the next bullet intact', () => {
+    const document = doc(bullet('first', bullet('child')), bullet('second'), bullet('keep'))
+    const state = extend(
+      EditorState.create({ doc: document, selection: NodeSelection.create(document, 0) }),
+      1,
+    )
+    const next = state.apply(state.tr.deleteSelection())
+    expect(next.doc.eq(doc(bullet('keep')))).toBe(true)
+  })
+
+  it('selects only siblings within a nested list', () => {
+    const first = bullet('nested one')
+    const second = bullet('nested two')
+    const parentText = paragraph('parent')
+    const document = doc(
+      schema.nodes.list.create(null, [parentText, first, second]),
+      bullet('outside'),
+    )
+    const start = 1 + parentText.nodeSize
+    const state = extend(
+      EditorState.create({ doc: document, selection: NodeSelection.create(document, start) }),
+      1,
+    )
+    expect([state.selection.from, state.selection.to]).toEqual([
+      start,
+      start + first.nodeSize + second.nodeSize,
+    ])
+    expect(extend(state, 1)).toBe(state)
+  })
+
+  it('does not intercept ordinary text selections or cross a non-bullet block', () => {
+    const document = doc(bullet('first'), paragraph('gap'), bullet('last'))
+    expect(extendBulletSelection(1)(stateWith(document, 2))).toBe(false)
+    const state = EditorState.create({
+      doc: document,
+      selection: NodeSelection.create(document, 0),
+    })
+    expect(extend(state, 1)).toBe(state)
+  })
+
+  it('round-trips JSON and maps bookmarks when content is inserted or deleted', () => {
+    const first = bullet('first')
+    const document = doc(first, bullet('second'), bullet('keep'))
+    const selection = new BulletRangeSelection(document, 0, first.nodeSize)
+    expect(BulletRangeSelection.fromJSON(document, selection.toJSON()).eq(selection)).toBe(true)
+    const state = EditorState.create({ doc: document, selection })
+    const transaction = state.tr.insert(0, paragraph('before'))
+    expect(selection.map(transaction.doc, transaction.mapping).from).toBe(
+      paragraph('before').nodeSize,
+    )
+    const deletion = state.tr.delete(0, first.nodeSize + document.child(1).nodeSize)
+    expect(() => selection.getBookmark().map(deletion.mapping).resolve(deletion.doc)).not.toThrow()
   })
 })
